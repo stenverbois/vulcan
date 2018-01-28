@@ -11,7 +11,7 @@ send:
 
 load:
 	${MAKE} -C ecu-send load $(OPTS)
-	${MAKE} -C ecu-recv load $(OPTS)
+#	${MAKE} -C ecu-recv load $(OPTS)
 
 sim-recv:
 	${MAKE} -C ecu-recv background-sim $(OPTS) QUIET=1

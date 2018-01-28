@@ -5,14 +5,13 @@
 
 #define BENCH_SEND          0
 #define BENCH_DEMO          0
-#define BENCH_RTT           1
+#define BENCH_RTT           0
+#define BENCH_ATTESTATION   1
 
 /* Authenticated CAN interface, managed by an _unprotected_ driver. */
 DECLARE_VULCAN_ICAN(msp_ican, CAN_SPI_SS, CAN_500_KHZ, CAN_ID_PONG, CAN_ID_AEC_RECV);
 DECLARE_TSC_TIMER(tsc_eval);
 
-VULCAN_DATA const uint8_t msg_ping_init[CAN_PAYLOAD_SIZE] =
-            {0x01, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
 VULCAN_DATA uint8_t msg_ping[CAN_PAYLOAD_SIZE];
 VULCAN_DATA uint8_t msg_pong[CAN_PAYLOAD_SIZE];
 VULCAN_DATA uint16_t msg_id;
@@ -118,6 +117,7 @@ void VULCAN_FUNC eval_rtt(void)
     pr_progress("Measuring round-trip time (ping-pong)");
     total = 0;
     // keep the RTT experiment running for ever
+    
     while (1)
     {
         msg_id = -1;
@@ -130,6 +130,24 @@ void VULCAN_FUNC eval_rtt(void)
         total += tsc_eval_get_interval();
     }
     dump_avg();
+}
+#endif
+
+#ifdef BENCH_ATTESTATION
+void VULCAN_FUNC eval_attestation(void)
+{
+    uint16_t id;
+    uint8_t msg[CAN_PAYLOAD_SIZE] = {0x00};
+
+    pr_progress("Waiting for attestation server to send challenge");
+
+    // @NOTE This does receive
+    sync_recv();
+
+    // @NOTE This doesn't receive
+    while ((ican_recv(&msp_ican, &id, msg, /*block=*/1) < 0));
+
+    pr_progress("Challenge recieved");
 }
 #endif
 
@@ -167,6 +185,10 @@ void VULCAN_ENTRY eval_run(void)
 
     #if BENCH_RTT
         eval_rtt();
+    #endif
+
+    #if BENCH_ATTESTATION
+        eval_attestation();
     #endif
 
     pr_progress("sending stop signal to receiver process");
