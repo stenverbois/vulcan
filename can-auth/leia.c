@@ -212,10 +212,6 @@ int VULCAN_FUNC vulcan_init(ican_t *ican, ican_link_info_t connections[],
         leia_session_key_gen();
     }
 
-    i = ican_init(ican);
-    ASSERT(i >= 0);
-    pr_info("CAN controller initialized");
-
     return 0;
 }
 

@@ -16,6 +16,10 @@ VULCAN_DATA uint8_t msg_ping[CAN_PAYLOAD_SIZE];
 VULCAN_DATA uint8_t msg_pong[CAN_PAYLOAD_SIZE];
 VULCAN_DATA uint16_t msg_id;
 
+VULCAN_DATA const uint8_t msg_ping_init[CAN_PAYLOAD_SIZE] =
+    {0x01, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+
+
 void CAN_DRV_FUNC __attribute__((noinline)) sync_recv(void)
 {
     uint16_t id = -1;
@@ -138,6 +142,8 @@ void VULCAN_FUNC eval_attestation(void)
 {
     uint16_t id;
     uint8_t msg[CAN_PAYLOAD_SIZE] = {0x00};
+
+    void 
 
     pr_progress("Waiting for attestation server to send challenge");
 
