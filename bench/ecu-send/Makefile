@@ -35,11 +35,14 @@ $(TARGET_SIM_NO_MAC): $(OBJECTS) can-sim.o
 %.elf: no_mac_%.elf
 	$(SANCUS_CRYPTO) $(CRYPTOFLAGS) -o $@ $<
 
-load: $(TARGET)
+load: $(TARGET) get-key
 	$(SANCUS_LOAD) $(LOADFLAGS) $<
 
 sim: $(TARGET_SIM)
 	$(SANCUS_SIM) $(SIMFLAGS) --fileio-in ../can-pong.bin --fileio-out ../can-ping.bin $<
+
+get-key: $(TARGET)
+	@echo "Node-specific key of $(TARGET) is '$(shell $(SANCUS_CRYPTO) --key $(VENDOR_KEY) --gen-sm-key $(VULCAN_SM) $(TARGET) | xxd -p)'"
 
 clean:
 	$(RM) *.elf *.o *.bin *.fst $(OBJECTS)

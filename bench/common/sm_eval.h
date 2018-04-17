@@ -25,9 +25,6 @@ extern struct SancusModule sm_eval;
 extern ican_t msp_ican;
 extern VULCAN_DATA ican_link_info_t eval_connections[];
 
-VULCAN_DATA const uint8_t msg_ping_init[CAN_PAYLOAD_SIZE] =
-            {0x01, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
-
 void VULCAN_ENTRY eval_run(void);
 
 void SM_ENTRY(sm_eval) dummy_entry(void);
