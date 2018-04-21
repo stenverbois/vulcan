@@ -65,6 +65,9 @@
     #define MAC_TIMER_END()
 #endif
 
+// Flags to be used by ican_link_info_t::flags
+#define CONNECTION_INITIALIZED 0x01    // Received connection key
+
 // NOTE: protocol_info_t should be defined before this header
 typedef protocol_info_t ican_link_info_t;
 
@@ -82,6 +85,14 @@ typedef union {
     uint64_t quad;
 } ican_buf_t;
 
+typedef struct __attribute__((__packed__)) _key_sequence_t {
+    uint16_t connection_id;
+    uint8_t  unused1[6];
+    uint8_t  nonce[8];
+    uint8_t  connection_key[SANCUS_SECURITY/8];
+    uint8_t  mac[SANCUS_SECURITY/8];
+} key_sequence_t;
+
 int VULCAN_FUNC vulcan_init(ican_t *ican, ican_link_info_t connections[],
                               size_t nb_connections);
 
@@ -96,7 +107,7 @@ int VULCAN_FUNC vulcan_recv(ican_t *ican, uint16_t *id, uint8_t *buf,
 #define DECLARE_VULCAN_ICAN( ican, spi, rate, id0, id1 )            \
     DECLARE_ICAN( ican, spi, rate, ICAN_MASK_RECEIVE_SINGLE,        \
                   ICAN_MASK_RECEIVE_SINGLE_AUTH,                    \
-                  0x0 | ICAN_VULCAN_F0_MASK, 0x00,                  \
+                  0x0 | ICAN_VULCAN_F0_MASK, 0x555,                 \
                   id0 | ICAN_FILTER_EXTENDED, id0,                  \
                   id1 | ICAN_FILTER_EXTENDED, id1)
 

@@ -195,10 +195,6 @@ int VULCAN_FUNC vulcan_init(ican_t *ican, ican_link_info_t connections[],
     vatican_nb_connections = nb_connections;
     vatican_nonce_reset(0x0);
 
-    rv = ican_init(ican);
-    ASSERT(rv >= 0);
-    pr_info("CAN controller initialized");
-
     return 0;
 }
 

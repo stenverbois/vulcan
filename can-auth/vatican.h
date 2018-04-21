@@ -30,8 +30,9 @@
 
 typedef struct {
     uint16_t        id;
-    const uint8_t *k_i;
-    uint32_t       c;
+    uint8_t        *k_i;
+    uint32_t        flags;
+    uint32_t        c;
 } protocol_info_t;
 
 #include "vulcan.h"

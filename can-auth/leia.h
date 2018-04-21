@@ -41,7 +41,8 @@
 
 typedef struct {
     uint16_t        id;
-    const uint8_t   *k_i;
+    uint8_t        *k_i;
+    uint32_t        flags;
     uint64_t        epoch;
     uint8_t         k_e[LEIA_KEY_SIZE];
     uint16_t        c;

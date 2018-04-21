@@ -5,17 +5,19 @@
 
 #define BENCH_SEND          0
 #define BENCH_DEMO          0
-#define BENCH_RTT           1
+#define BENCH_RTT           1           
 
 /* Authenticated CAN interface, managed by an _unprotected_ driver. */
 DECLARE_VULCAN_ICAN(msp_ican, CAN_SPI_SS, CAN_500_KHZ, CAN_ID_PONG, CAN_ID_AEC_RECV);
 DECLARE_TSC_TIMER(tsc_eval);
 
-VULCAN_DATA const uint8_t msg_ping_init[CAN_PAYLOAD_SIZE] =
-            {0x01, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
 VULCAN_DATA uint8_t msg_ping[CAN_PAYLOAD_SIZE];
 VULCAN_DATA uint8_t msg_pong[CAN_PAYLOAD_SIZE];
 VULCAN_DATA uint16_t msg_id;
+
+VULCAN_DATA const uint8_t msg_ping_init[CAN_PAYLOAD_SIZE] =
+            {0x01, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+
 
 void CAN_DRV_FUNC __attribute__((noinline)) sync_recv(void)
 {
@@ -117,8 +119,9 @@ void VULCAN_FUNC eval_rtt(void)
 
     pr_progress("Measuring round-trip time (ping-pong)");
     total = 0;
+
     // keep the RTT experiment running for ever
-    while (1)
+    for (i = 0; i < 2; i++)
     {
         msg_id = -1;
         /* Measure Round Trip Time for (authenticated) CAN messages */
@@ -146,7 +149,9 @@ void VULCAN_ENTRY eval_run(void)
 {
     int i, rv;
     uint8_t stop_msg = 0x0;
-    eval_do_init(/*own=*/ CAN_ID_AEC_SEND, /*listen=*/ CAN_ID_AEC_RECV);
+
+    eval_do_init(ID_PM, /*own=*/ CAN_ID_AEC_SEND, /*listen=*/ CAN_ID_AEC_RECV);
+    
     for (i=0; i < CAN_PAYLOAD_SIZE; i++)
         msg_ping[i] = msg_ping_init[i];
 
