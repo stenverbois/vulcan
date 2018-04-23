@@ -4,6 +4,8 @@
 #include <sancus/sm_support.h>
 #include "../../drivers/ican.h"
 
+#define SANCUS_SECURITY_BYTES (SANCUS_SECURITY / 8)
+
 #define CAN_SPI_SS          1
 #define CAN_ID_PING         0xf0
 #define CAN_ID_PONG         0xf8
@@ -32,6 +34,5 @@ void VULCAN_ENTRY eval_run(void);
 void SM_ENTRY(sm_eval) dummy_entry(void);
 
 void VULCAN_FUNC eval_do_init(uint16_t id_pm, uint16_t aec_own, uint16_t aec_listen);
-void VULCAN_FUNC eval_do_key_distribution(void);
 
 #endif

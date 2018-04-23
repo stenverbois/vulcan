@@ -5,7 +5,7 @@
 
 #define BENCH_SEND          0
 #define BENCH_DEMO          0
-#define BENCH_RTT           1           
+#define BENCH_RTT           1
 
 /* Authenticated CAN interface, managed by an _unprotected_ driver. */
 DECLARE_VULCAN_ICAN(msp_ican, CAN_SPI_SS, CAN_500_KHZ, CAN_ID_PONG, CAN_ID_AEC_RECV);
@@ -150,7 +150,7 @@ void VULCAN_ENTRY eval_run(void)
     int i, rv;
     uint8_t stop_msg = 0x0;
 
-    eval_do_init(ID_PM, /*own=*/ CAN_ID_AEC_SEND, /*listen=*/ CAN_ID_AEC_RECV);
+    eval_do_init(ID_SM, /*own=*/ CAN_ID_AEC_SEND, /*listen=*/ CAN_ID_AEC_RECV);
     
     for (i=0; i < CAN_PAYLOAD_SIZE; i++)
         msg_ping[i] = msg_ping_init[i];

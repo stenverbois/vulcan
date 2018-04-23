@@ -209,12 +209,6 @@ int VULCAN_FUNC vulcan_init(ican_t *ican, ican_link_info_t connections[],
         leia_cur = &leia_connections[i];
         leia_cur->epoch = 0x0;
 
-        /*
-        if (leia_cur->id == 0xF0) {
-            leia_cur->epoch = 0x9;
-        }
-        */
-
         leia_session_key_gen();
     }
 

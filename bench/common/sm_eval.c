@@ -10,17 +10,24 @@ DECLARE_SM(sm_eval, 0x1234);
 
 /*
  * Securely store connection initialization info in SM text section
- * NOTE: key secrecy could be protected via confidential loading
+ * NOTE: key secrecy is only protected via confidential loading during
+ * the attestation process
  */
-VULCAN_DATA uint8_t eval_key_aec[SANCUS_KEY_SIZE] =
+#if ATTESTATION
+VULCAN_DATA uint8_t eval_key_aec[SANCUS_KEY_SIZE] = { 0x00 };
+VULCAN_DATA uint8_t eval_key_ping[SANCUS_KEY_SIZE] = { 0x00 };
+VULCAN_DATA uint8_t eval_key_pong[SANCUS_KEY_SIZE] = { 0x00 };
+#else
+VULCAN_DATA const uint8_t eval_key_aec[SANCUS_KEY_SIZE] =
          {0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe, 0xba, 0xbe,
           0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
-VULCAN_DATA uint8_t eval_key_ping[SANCUS_KEY_SIZE] =
+VULCAN_DATA const uint8_t eval_key_ping[SANCUS_KEY_SIZE] =
          {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
           0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
-VULCAN_DATA uint8_t eval_key_pong[SANCUS_KEY_SIZE] =
+VULCAN_DATA const uint8_t eval_key_pong[SANCUS_KEY_SIZE] =
          {0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff,
           0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
+#endif
 
 /*
  * Securely store the state of this SM
@@ -34,7 +41,7 @@ VULCAN_DATA int eval_state = 0;
 VULCAN_DATA ican_link_info_t eval_connections[EVAL_NB_CONNECTIONS];
 
 // Untrusted key sequence receive buffer
-#define SEQUENCE_LEN 6
+#define SEQUENCE_LEN (2 + 4 * SANCUS_SECURITY_BYTES)
 key_sequence_t u_key_sequence_recv;
 
 void request_key_unprotected(uint16_t send, uint16_t recv)
@@ -52,8 +59,8 @@ void receive_key_sequence_unprotected()
 {
     int i;
     uint16_t id = 0;
-    // Receive response consisting of 4 CAN messages:
-    // nonce (1 msg), key (2 msg) and mac of nonce and key (1 msg) 
+    // Receive response consisting of 6 CAN messages:
+    // id_sm, id_connection (1 msg), nonce (1 msg), key (2 msg) and mac over all previous messages (2 msg)
     for(i = 0; i < SEQUENCE_LEN; i++) {
         ican_recv(&msp_ican, &id, (uint8_t*)(&u_key_sequence_recv) + i * CAN_PAYLOAD_SIZE, /*block=*/1);
         pr_debug_buf((uint8_t*)(&u_key_sequence_recv) + i * CAN_PAYLOAD_SIZE, CAN_PAYLOAD_SIZE, INFO_STR("RECEIVED: "));
@@ -68,7 +75,7 @@ int VULCAN_FUNC unwrap_key_sequence(key_sequence_t* cipher, key_sequence_t* unwr
     const size_t AD_LEN = 4;
     uint8_t ad[AD_LEN] = {0x01, 0x02, 0x03, 0x04};
 
-    return sancus_unwrap(ad, AD_LEN, (uint8_t*)cipher, 4 * CAN_PAYLOAD_SIZE, cipher->mac, (uint8_t*)unwrapped);
+    return sancus_unwrap(ad, AD_LEN, (uint8_t*)cipher, sizeof(key_sequence_t) - SANCUS_SECURITY_BYTES, cipher->mac, (uint8_t*)unwrapped);
 }
 
 /*
