@@ -14,11 +14,15 @@ DECLARE_SM(sm_eval, 0x1234);
  * the attestation process
  */
 #if ATTESTATION
-VULCAN_DATA uint8_t eval_key_aec[SANCUS_KEY_SIZE] = { 0x00 };
+VULCAN_DATA uint8_t eval_key_aec_own[SANCUS_KEY_SIZE] = { 0x00 };
+VULCAN_DATA uint8_t eval_key_aec_listen[SANCUS_KEY_SIZE] = { 0x00 };
 VULCAN_DATA uint8_t eval_key_ping[SANCUS_KEY_SIZE] = { 0x00 };
 VULCAN_DATA uint8_t eval_key_pong[SANCUS_KEY_SIZE] = { 0x00 };
 #else
-VULCAN_DATA const uint8_t eval_key_aec[SANCUS_KEY_SIZE] =
+VULCAN_DATA const uint8_t eval_key_aec_own[SANCUS_KEY_SIZE] =
+         {0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe, 0xba, 0xbe,
+          0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+VULCAN_DATA const uint8_t eval_key_aec_listen[SANCUS_KEY_SIZE] =
          {0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe, 0xba, 0xbe,
           0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
 VULCAN_DATA const uint8_t eval_key_ping[SANCUS_KEY_SIZE] =
@@ -41,7 +45,7 @@ VULCAN_DATA int eval_state = 0;
 VULCAN_DATA ican_link_info_t eval_connections[EVAL_NB_CONNECTIONS];
 
 // Untrusted key sequence receive buffer
-#define SEQUENCE_LEN (2 + 4 * SANCUS_SECURITY_BYTES)
+#define SEQUENCE_LEN (2 + 2 * SANCUS_SECURITY_BYTES / 8)
 key_sequence_t u_key_sequence_recv;
 
 void request_key_unprotected(uint16_t send, uint16_t recv)
@@ -228,11 +232,11 @@ void VULCAN_FUNC eval_do_init(uint16_t id_sm, uint16_t aec_own, uint16_t aec_lis
     eval_connections[1].k_i = &eval_key_pong[0];
     eval_connections[1].flags = 0;
     eval_connections[2].id = aec_listen;
-    eval_connections[2].k_i = &eval_key_aec[0];
-    eval_connections[2].flags = CONNECTION_INITIALIZED;
+    eval_connections[2].k_i = &eval_key_aec_listen[0];
+    eval_connections[2].flags = 0;
     eval_connections[3].id = aec_own;
-    eval_connections[3].k_i = &eval_key_aec[0];
-    eval_connections[3].flags = CONNECTION_INITIALIZED;
+    eval_connections[3].k_i = &eval_key_aec_own[0];
+    eval_connections[3].flags = 0;
 
     i = ican_init(&msp_ican);
     ASSERT(i >= 0);
