@@ -86,12 +86,14 @@ typedef union {
 } ican_buf_t;
 
 typedef struct __attribute__((__packed__)) _key_sequence_t {
+    uint16_t pm_id;
     uint16_t connection_id;
-    uint8_t  unused1[6];
-    uint8_t  nonce[8];
+    uint8_t  unused1[4];
     uint8_t  connection_key[SANCUS_SECURITY/8];
     uint8_t  mac[SANCUS_SECURITY/8];
 } key_sequence_t;
+
+#define KEY_SEQUENCE_LEN (sizeof(key_sequence_t) / CAN_PAYLOAD_SIZE)
 
 int VULCAN_FUNC vulcan_init(ican_t *ican, ican_link_info_t connections[],
                               size_t nb_connections);

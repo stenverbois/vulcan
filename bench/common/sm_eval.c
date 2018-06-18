@@ -45,8 +45,9 @@ VULCAN_DATA int eval_state = 0;
 VULCAN_DATA ican_link_info_t eval_connections[EVAL_NB_CONNECTIONS];
 
 // Untrusted key sequence receive buffer
-#define SEQUENCE_LEN (2 + 2 * SANCUS_SECURITY_BYTES / 8)
 key_sequence_t u_key_sequence_recv;
+
+const uint8_t attestation_constant[] = {0xA7, 0x7E, 0x57, 0xED};
 
 void request_key_unprotected(uint16_t send, uint16_t recv)
 {
@@ -65,7 +66,7 @@ void receive_key_sequence_unprotected()
     uint16_t id = 0;
     // Receive response consisting of 6 CAN messages:
     // id_sm, id_connection (1 msg), nonce (1 msg), key (2 msg) and mac over all previous messages (2 msg)
-    for(i = 0; i < SEQUENCE_LEN; i++) {
+    for(i = 0; i < KEY_SEQUENCE_LEN; i++) {
         ican_recv(&msp_ican, &id, (uint8_t*)(&u_key_sequence_recv) + i * CAN_PAYLOAD_SIZE, /*block=*/1);
         pr_debug_buf((uint8_t*)(&u_key_sequence_recv) + i * CAN_PAYLOAD_SIZE, CAN_PAYLOAD_SIZE, INFO_STR("RECEIVED: "));
     }
@@ -77,7 +78,7 @@ void receive_key_sequence_unprotected()
 int VULCAN_FUNC unwrap_key_sequence(key_sequence_t* cipher, key_sequence_t* unwrapped)
 {
     const size_t AD_LEN = 4;
-    uint8_t ad[AD_LEN] = {0x01, 0x02, 0x03, 0x04};
+    uint8_t ad[AD_LEN] = {0x00, 0x00, 0x00, 0x00};
 
     return sancus_unwrap(ad, AD_LEN, (uint8_t*)cipher, sizeof(key_sequence_t) - SANCUS_SECURITY_BYTES, cipher->mac, (uint8_t*)unwrapped);
 }
@@ -95,9 +96,8 @@ int VULCAN_FUNC receive_key_sequence(key_sequence_t* unwrapped)
 
     pr_info1("Unwrapping result: %i\n", res);
 
-    pr_debug_buf((uint8_t*)unwrapped, CAN_PAYLOAD_SIZE, INFO_STR("Received id: "));
-    pr_debug_buf((uint8_t*)unwrapped + CAN_PAYLOAD_SIZE, CAN_PAYLOAD_SIZE, INFO_STR("Received nonce: "));
-    pr_debug_buf((uint8_t*)unwrapped + CAN_PAYLOAD_SIZE * 2, CAN_PAYLOAD_SIZE * 2, INFO_STR("Received key: "));
+    pr_debug_buf((uint8_t*)unwrapped, CAN_PAYLOAD_SIZE, INFO_STR("Received ids: "));
+    pr_debug_buf(unwrapped->connection_key, CAN_PAYLOAD_SIZE * 2, INFO_STR("Received key: "));
 
     return res;
 }
@@ -206,7 +206,13 @@ void VULCAN_FUNC eval_do_attestation(uint16_t id_sm)
             
             pr_info1("Initialized: %X\n", connection_id);
             
-            sancus_tag(unwrapped_sequence.nonce, 8, tag.bytes);
+            // pr_debug_buf(unwrapped_sequence.connection_key, CAN_PAYLOAD_SIZE * 2, INFO_STR("TAG KEY"));
+            // pr_debug_buf(attestation_constant, 4, INFO_STR("TAG CONST"));
+
+            sancus_tag_with_key(unwrapped_sequence.connection_key, attestation_constant, 4, tag.bytes);
+            // XXX Removing this buffer print statement results in a wrong tag
+            pr_debug_buf(tag.bytes, CAN_PAYLOAD_SIZE * 2, INFO_STR("TAG RESULT"));
+
             ican_buf_t b;
             b.quad = 0;
             b.words[0] = id_sm;
