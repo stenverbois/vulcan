@@ -86,8 +86,8 @@ typedef union {
 } ican_buf_t;
 
 typedef struct __attribute__((__packed__)) _key_sequence_t {
-    uint16_t pm_id;
-    uint16_t connection_id;
+    uint16_t id_pm;
+    uint16_t id_connection;
     uint8_t  unused1[4];
     uint8_t  connection_key[SANCUS_SECURITY/8];
     uint8_t  mac[SANCUS_SECURITY/8];

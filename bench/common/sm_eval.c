@@ -57,14 +57,13 @@ void receive_key_sequence_unprotected()
 {
     int i;
     uint16_t id = 0;
-    // Receive response consisting of 6 CAN messages:
-    // id_sm, id_connection (1 msg), nonce (1 msg), key (2 msg) and mac over all previous messages (2 msg)
+    // Receive response consisting of 5 CAN messages:
+    // id_sm, id_connection (1 msg), connection key (2 msg) and mac over all previous messages (2 msg)
     for(i = 0; i < KEY_SEQUENCE_LEN; i++) {
         ican_recv(&msp_ican, &id, (uint8_t*)(&u_key_sequence_recv) + i * CAN_PAYLOAD_SIZE, /*block=*/1);
     }
     
-    // XXX Removing this causes sancus_tag_with_key to produce incorrect results.
-    pr_debug_buf((uint8_t*)(&u_key_sequence_recv), sizeof(key_sequence_t), INFO_STR("Wrapped Key Sequence: "));
+    pr_debug_buf((uint8_t*)(&u_key_sequence_recv), sizeof(key_sequence_t), INFO_STR("Wrapped Key Sequence:"));
 }
 
 /*
@@ -78,7 +77,7 @@ int VULCAN_FUNC unwrap_key_sequence(key_sequence_t* cipher, key_sequence_t* unwr
     const size_t AD_LEN = 4;
     uint8_t ad[AD_LEN] = {0x00, 0x00, 0x00, 0x00};
 
-    ret =  sancus_unwrap(ad, AD_LEN, (uint8_t*)cipher, sizeof(key_sequence_t) - SANCUS_SECURITY_BYTES, cipher->mac, (uint8_t*)unwrapped);
+    ret = sancus_unwrap(ad, AD_LEN, (uint8_t*)&cipher->id_connection, sizeof(key_sequence_t) - sizeof(uint16_t) - SANCUS_SECURITY_BYTES, cipher->mac, (uint8_t*)&unwrapped->id_connection);
 
     return ret;
 }
@@ -87,14 +86,22 @@ int VULCAN_FUNC unwrap_key_sequence(key_sequence_t* cipher, key_sequence_t* unwr
  * Receives a key sequence from the CAN bus.
  * Returns true if unwrapping succeeded, false otherwise.
  */
-int VULCAN_FUNC receive_key_sequence(key_sequence_t* unwrapped)
+int VULCAN_FUNC receive_key_sequence(key_sequence_t* unwrapped, uint16_t id_sm)
 {
     int ret = 0;
 
     receive_key_sequence_unprotected();
+ 
+    // Optimalisation. If this key sequence is not meant for this PM, discard it.
+    if (u_key_sequence_recv.id_pm != id_sm)
+    {
+        ret = 0;
+        pr_info1("Discarding key sequence for PM 0x%02x\n", u_key_sequence_recv.id_pm);
+        return ret;
+    }
+
     ret = unwrap_key_sequence(&u_key_sequence_recv, unwrapped);
 
-    // XXX Removing this causes sancus_tag_with_key to produce incorrect results.
     pr_info1("Unwrapping successful: %i\n", ret);
 
     pr_debug_buf((uint8_t*)unwrapped, CAN_PAYLOAD_SIZE, INFO_STR("Received ids:"));
@@ -141,12 +148,12 @@ int VULCAN_FUNC eval_all_connections_initialized()
 }
 
 /*
- * Copy a connection key.
+ * Copy a connection key from `src` to `dst`.
  */
 void VULCAN_FUNC eval_copy_key(uint8_t* dst, const uint8_t* src)
 {
     int i;
-    for (i = 0; i < 16; i++)
+    for (i = 0; i < SANCUS_KEY_SIZE; i++)
     {
         dst[i] = src[i];
     }
@@ -184,39 +191,42 @@ int VULCAN_FUNC attest_respond(ican_t *ican, uint16_t id, uint8_t *buf,
 void VULCAN_FUNC eval_do_attestation(uint16_t id_sm)
 {
     int unwrap_result;
-    uint16_t connection_id;
+    uint16_t id_connection;
     key_sequence_t unwrapped_sequence;
     ican_link_info_t* conn_cur;
     ican_tag_t tag;
 
     while (!eval_all_connections_initialized())
     {
-        unwrap_result = receive_key_sequence(&unwrapped_sequence);
+        unwrap_result = receive_key_sequence(&unwrapped_sequence, id_sm);
         
         // If unwrapping was unsuccessful, this key sequence was not meant for this SM
         if (!unwrap_result)
             continue;
 
-        connection_id = unwrapped_sequence.connection_id;
-        conn_cur = eval_find_connection(connection_id);
+        id_connection = unwrapped_sequence.id_connection;
+        conn_cur = eval_find_connection(id_connection);
         if (conn_cur)
         {
             eval_copy_key(conn_cur->k_i, unwrapped_sequence.connection_key);
             conn_cur->flags |= CONNECTION_INITIALIZED;
             
-            pr_info1("Initialized connection id: %X\n", connection_id);
+            pr_info1("Initialized connection id: %X\n", id_connection);
             
-            // pr_debug_buf(unwrapped_sequence.connection_key, CAN_PAYLOAD_SIZE * 2, INFO_STR("TAG KEY"));
-            // pr_debug_buf(attestation_constant, 4, INFO_STR("TAG CONST"));
 
             sancus_tag_with_key(unwrapped_sequence.connection_key, attestation_constant, 4, tag.bytes);
-            // XXX Removing this causes sancus_tag_with_key to produce incorrect results.
-            pr_debug_buf(tag.bytes, CAN_PAYLOAD_SIZE * 2, INFO_STR("Response tag:"));
+            // The call to sancus_tag_with_key seems to hit undefined behavior somewhere.
+            // Adding or removing a comment print (pr_debug_buf) causes its result to become
+            // incorrect, while the used key and constant remain correct.
+            // Haven't figured out why this is. -- Sten, 20 june 2018
+            // pr_debug_buf(unwrapped_sequence.connection_key, CAN_PAYLOAD_SIZE * 2, INFO_STR("TAG KEY"));
+            // pr_debug_buf(attestation_constant, 4, INFO_STR("TAG CONST"));
+            // pr_debug_buf(tag.bytes, CAN_PAYLOAD_SIZE * 2, INFO_STR("Response tag:"));
 
             ican_buf_t response;
             response.quad = 0;
             response.words[0] = id_sm;
-            response.words[1] = connection_id;
+            response.words[1] = id_connection;
             attest_respond(&msp_ican, CAN_ID_ATTEST_RECV, response.bytes, CAN_PAYLOAD_SIZE, /*block=*/1);
             attest_respond(&msp_ican, CAN_ID_ATTEST_RECV, (uint8_t*)(&tag.quads[1]), CAN_PAYLOAD_SIZE, /*block=*/1);
         }
@@ -250,9 +260,6 @@ void VULCAN_FUNC eval_do_init(uint16_t id_sm, uint16_t aec_own, uint16_t aec_lis
 
     #if ATTESTATION
         eval_do_attestation(id_sm);
-
-        // pr_debug_buf(eval_connections[0].k_i, 16, INFO_STR("conn F0 k_i"));
-        // pr_debug_buf(eval_connections[1].k_i, 16, INFO_STR("conn F1 k_i"));
     #endif
 
     vulcan_init(&msp_ican, eval_connections, EVAL_NB_CONNECTIONS);
