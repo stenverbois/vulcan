@@ -19,7 +19,7 @@ void VULCAN_ENTRY eval_run(void)
     uint8_t msg_ping[CAN_PAYLOAD_SIZE] = {0x00};
     uint8_t msg_pong[CAN_PAYLOAD_SIZE] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
 
-    eval_do_init(/*own=*/ CAN_ID_AEC_RECV, /*listen=*/ CAN_ID_AEC_SEND);
+    eval_do_init(ID_SM, /*own=*/ CAN_ID_AEC_RECV, /*listen=*/ CAN_ID_AEC_SEND);
 
     /* Synchronize with sender */
     sync_send();

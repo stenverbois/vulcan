@@ -1,3 +1,5 @@
+ID_SM=2
+
 -include ../../Makefile.config
 
 SOURCES             = $(shell ls *.c ../common/*.c)
@@ -35,7 +37,7 @@ $(TARGET_SIM_NO_MAC): $(OBJECTS) can-sim.o
 %.elf: no_mac_%.elf
 	$(SANCUS_CRYPTO) $(CRYPTOFLAGS) -o $@ $<
 
-load: $(TARGET)
+load: $(TARGET) print-sm-key
 	$(SANCUS_LOAD) $(LOADFLAGS) $<
 
 sim: $(TARGET_SIM)
@@ -43,6 +45,9 @@ sim: $(TARGET_SIM)
 
 background-sim: $(TARGET_SIM)
 	$(SANCUS_SIM) $(SIMFLAGS) --fileio-in ../can-ping.bin --fileio-out ../can-pong.bin $< > sim-recv-out.txt 2>&1 &
+
+print-sm-key: $(TARGET)
+	@echo "Module-specific key of $(TARGET) is '$(shell $(SANCUS_CRYPTO) --key $(VENDOR_KEY) --gen-sm-key $(VULCAN_SM) $(TARGET) | xxd -p)'"
 
 clean:
 	$(RM) *.elf *.o *.bin *.fst $(OBJECTS)

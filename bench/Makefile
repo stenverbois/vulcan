@@ -1,5 +1,5 @@
 # comment below to benchmark (un)protected Sancus+vatiCAN/LeiA
-OPTS = BENCH=0 NOAUTH=0 VULCAN_SM=sm_eval #CAN_DRV_SM=sm_eval
+OPTS = BENCH=0 NOAUTH=0 VULCAN_SM=sm_eval ATTESTATION=1 #CAN_DRV_SM=sm_eval
 
 all: send recv
 
